@@ -1,0 +1,47 @@
+.intro-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom, #ffe4ec, #ffd1dc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.intro-title {
+  font-size: 2.5rem;
+  color: #d63384;
+  margin-bottom: 20px;
+  animation: fadeIn 1.5s ease;
+}
+
+.petal {
+  position: absolute;
+  top: -50px;
+  width: 15px;
+  height: 15px;
+  background: pink;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: fall linear infinite;
+}
+
+.petal:nth-child(odd) {
+  background: #ff69b4;
+}
+
+@keyframes fall {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(110vh) rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
