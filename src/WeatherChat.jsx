@@ -20,11 +20,11 @@ export default function WeatherChat() {
      ──────────────── */
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState("");
+
   const [theme, setTheme] = useState("light");
-  const [dashboardOpen, setDashboardOpen] = useState(true);
-
-
+  const [dashboardOpen, setDashboardOpen] = useState(false);
   /* ────────────────
      WEATHER AGENT
      ──────────────── */
@@ -103,15 +103,118 @@ export default function WeatherChat() {
     });
   }
 
+  function clearCurrentChat() {
+  if (!activeChatId) return;
+
+  setChats(prev =>
+    prev.map(chat =>
+      chat.id === activeChatId
+        ? {
+            ...chat,
+            messages: [],
+            lastUpdated: new Date().toISOString()
+          }
+        : chat
+    )
+  );
+}
+
+
+
+
   /* ────────────────
-     CLEAR ALL CHATS
-     ──────────────── */
+   RENAME CHAT
+   ──────────────── */
+function renameChat(chatId, newTitle) {
+  setChats(prev =>
+    prev.map(chat =>
+      chat.id === chatId
+        ? { ...chat, title: newTitle }
+        : chat
+    )
+  );
+}
+    function getQuickReply(text) {
+  const msg = text.toLowerCase();
+
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  if (["hi", "hello", "hey"].some(w => msg.includes(w))) {
+    return pick([
+      "Hey 👋 How can I help you with the weather today?",
+      "Hello 😊 Want to check today’s forecast?",
+      "Hi there! ☀️ Ask me anything about the weather.",
+      "Hey! 🌤️ Which city’s weather do you need?"
+    ]);
+  }
+
+  if (msg.includes("how are you")) {
+    return pick([
+      "I'm doing great 😄 Ready to help with the weather!",
+      "All good here 🌈 How can I assist you?",
+      "Feeling sunny ☀️ What weather info do you need?"
+    ]);
+  }
+
+  if (msg.includes("thanks") || msg.includes("thank you")) {
+    return pick([
+      "You're welcome 😊",
+      "Anytime! ☀️",
+      "Glad I could help 🌤️",
+      "No problem at all!"
+    ]);
+  }
+
+  if (msg.includes("bye")) {
+    return pick([
+      "Goodbye 👋 Have a great day!",
+      "See you later 🌈",
+      "Bye! Stay safe and dry ☔",
+      "Take care 👋"
+    ]);
+  }
+
+  return null;
+}
+
+/* export */
+
+function exportCurrentChat() {
+  if (!activeChatId) return;
+
+  const chat = chats.find(c => c.id === activeChatId);
+  if (!chat || chat.messages.length === 0) return;
+
+  const content = chat.messages
+    .map(m => `${m.role.toUpperCase()} (${new Date(m.timestamp).toLocaleTimeString()}): ${m.content}`)
+    .join("\n\n");
+
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${chat.title || "chat"}.txt`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
+
+  /* CLEAR ALL CHATS */
   function clearAllChats() {
     setChats([]);
     setActiveChatId(null);
     localStorage.removeItem(CHAT_STORAGE_KEY);
     localStorage.removeItem(ACTIVE_CHAT_KEY);
   }
+
+  function toggleSearch() {
+      setShowSearch(prev => !prev);
+      if (showSearch) setSearchQuery("");
+    }
+
 
 //   Message Reactions
 function reactToMessage(chatId, messageId, type) {
@@ -195,10 +298,30 @@ function reactToMessage(chatId, messageId, type) {
         )
       );
     
-      // 4️⃣ Stream weather agent response
-      const basePrompt = text;
-    
-      await askAgent(basePrompt, streamedText => {
+      const quickReply = getQuickReply(text);
+
+      
+      if (quickReply) {
+        setChats(prev =>
+          prev.map(chat =>
+            chat.id === chatId
+              ? {
+                  ...chat,
+                  messages: chat.messages.map(msg =>
+                    msg.id === agentMessageId
+                      ? { ...msg, content: quickReply }
+                      : msg
+                  ),
+                  lastUpdated: new Date().toISOString()
+                }
+              : chat
+          )
+        );
+        return;
+      }
+
+      
+      await askAgent(text, streamedText => {
         setChats(prev =>
           prev.map(chat =>
             chat.id === chatId
@@ -215,6 +338,7 @@ function reactToMessage(chatId, messageId, type) {
           )
         );
       });
+
     }
     
     
@@ -290,54 +414,51 @@ function reactToMessage(chatId, messageId, type) {
      RENDER
      ──────────────── */
      return (
-      <AppShell
-        header={
-          <Header
-            onMenuClick={() => setDashboardOpen(true)}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            theme={theme}
-            onToggleTheme={() =>
-              setTheme(prev => (prev === "light" ? "dark" : "light"))
-            }
-          />
-        }
-        sidebar={
-          <Dashboard
-            open={dashboardOpen}
-            chats={chats}
-            activeChatId={activeChatId}
-            onSelectChat={(id) => {
-              setActiveChatId(id);
-              setDashboardOpen(false);
-            }}
-            onCreateChat={() => {
-              createChat();
-              setDashboardOpen(false);
-            }}
-            onDeleteChat={deleteChat}
-            onClearAll={clearAllChats}
-            onClose={() => setDashboardOpen(false)}
-          />
-        }
-        chat={
-          <ChatWindow
-            chat={chats.find(c => c.id === activeChatId)}
-            isTyping={isTyping}
-            searchQuery={searchQuery}
-            error={error}
-            onRegenerate={regenerateResponse}
-          />
-        }
-        input={
-          <ChatInput
-            onSend={sendMessage}
-            disabled={isTyping}
-          />
-        }
-      />
-    );
-  }    
- 
+  <>
+     <Header
+  onMenuClick={() => setDashboardOpen(true)}
+  onDeleteChat={() => deleteChat(activeChatId)}
+  onExportChat={exportCurrentChat}   // ✅ REQUIRED
+  onSearch={setSearchQuery}
+  theme={theme}
+  onToggleTheme={() =>
+    setTheme(prev => (prev === "light" ? "dark" : "light"))
+  }
+/>
+
+
+    <Dashboard
+      open={dashboardOpen}
+      chats={chats}
+      activeChatId={activeChatId}
+      onSelectChat={(id) => {
+        setActiveChatId(id);
+        setDashboardOpen(false);
+      }}
+      onCreateChat={() => {
+        createChat();
+        setDashboardOpen(false);
+      }}
+      onDeleteChat={deleteChat}
+      onRenameChat={renameChat}
+      onClearAll={clearAllChats}
+      onClose={() => setDashboardOpen(false)}
+    />
+
+    <ChatWindow
+      chat={chats.find(c => c.id === activeChatId)}
+      isTyping={isTyping}
+      searchQuery={searchQuery}
+      error={error}
+      onRegenerate={regenerateResponse}
+    />
+
+    <ChatInput
+      onSend={sendMessage}
+      disabled={isTyping}
+    />
+  </>
+);
+}
  
  

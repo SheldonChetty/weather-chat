@@ -1,31 +1,58 @@
-import MessageList from "../message/MessageList";
+import { useEffect, useRef } from "react";
 
-export default function ChatWindow({
-  chat,
-  isTyping,
-  searchQuery,
-  error,
-  onRegenerate
-}) {
+export default function ChatWindow({ chat, isTyping, error, searchQuery }) {
+  const bottomRef = useRef(null);
+
+  // Auto-scroll on new messages / typing
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat?.messages, isTyping]);
+
   if (!chat) {
     return (
-      <div className="chat-body-full">
-        <div style={{ textAlign: "center", marginTop: 40, opacity: 0.6 }}>
-          Start a new chat to ask about the weather 🌤️
-        </div>
+      <div className="chat-body">
+        <div className="empty-chat">Start a conversation 🌤️</div>
       </div>
     );
   }
 
-  const messages = chat.messages.filter(m =>
-    m.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 🔍 FILTER MESSAGES BASED ON SEARCH QUERY
+  const filteredMessages = searchQuery
+    ? chat.messages.filter(msg =>
+        msg.content
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      )
+    : chat.messages;
 
   return (
-    <div className="chat-body-full">
+    <div className="chat-body">
+      {filteredMessages.map(msg => (
+        <div key={msg.id} className={`message-row ${msg.role}`}>
+          <div className={`message-bubble ${msg.role}`}>
+            <div>{msg.content}</div>
+            <div className="message-time">
+              {new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {isTyping && (
+        <div className="message-row agent">
+          <div className="message-bubble agent typing">
+            Thinking…
+          </div>
+        </div>
+      )}
+
       {error && <div className="error">{error}</div>}
-      <MessageList messages={messages} />
-      {isTyping && <div className="typing">Agent is typing...</div>}
+
+      {/* 🔥 SCROLL TARGET */}
+      <div ref={bottomRef} />
     </div>
   );
 }
