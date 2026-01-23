@@ -1,18 +1,10 @@
 import MessageList from "./MessageList";
 
-export default function ChatWindow({ messages, loading, bottomRef }) {
+export default function ChatWindow({ messages, loading, bottomRef, onReact, onReply }) {
   return (
-    <div
-      style={{
-        border: "1px solid #ccc",
-        height: "60vh",
-        padding: "10px",
-        overflowY: "auto",
-        marginBottom: "10px"
-      }}
-    >
-      <MessageList messages={messages} />
-      {loading && <p>Agent is typing...</p>}
+    <div className="chat-body">
+      <MessageList messages={messages} onReact={onReact} onReply={onReply} />
+      {loading && <div className="typing">Agent is typing...</div>}
       <div ref={bottomRef}></div>
     </div>
   );
