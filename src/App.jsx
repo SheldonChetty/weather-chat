@@ -1,4 +1,4 @@
-import WeatherChat from "./components/WeatherChat";
+import WeatherChat from "./WeatherChat";
 
 export default function App() {
   return <WeatherChat />;
